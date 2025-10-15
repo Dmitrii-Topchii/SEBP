@@ -15,7 +15,7 @@ def check_tensors_gpu_ready(*tensors):
                f"Tensor check failed: CUDA={t.is_cuda if t is not None else 'None'}, Contiguous={t.is_contiguous() if t is not None else 'None'}"
 
 @triton.autotune(
-    configs=[ 
+    configs=[
         triton.Config({'BLOCK_M': 32, 'BLOCK_N': 64, 'BLOCK_K': 32, 'GROUP_M': 8}, num_stages=4, num_warps=4),
         triton.Config({'BLOCK_M': 64, 'BLOCK_N': 64, 'BLOCK_K': 64, 'GROUP_M': 8}, num_stages=3, num_warps=4),
         triton.Config({'BLOCK_M': 128, 'BLOCK_N': 128, 'BLOCK_K': 64, 'GROUP_M': 8}, num_stages=3, num_warps=8),
@@ -41,7 +41,7 @@ def fixed_slice_matmul_kernel(
     BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr,
     GROUP_M: tl.constexpr,
     num_stages: tl.constexpr, num_warps: tl.constexpr,
-):   
+):
     pid = tl.program_id(axis=0)
     num_pid_m = tl.cdiv(sparse_rows_to_keep, BLOCK_M); num_pid_n = tl.cdiv(N, BLOCK_N)
     num_pid_in_group = GROUP_M * num_pid_n; group_id = pid // num_pid_in_group
@@ -78,8 +78,8 @@ def fixed_slice_matmul_kernel(
 def sparse_row_matmul_sparse_method_triton(
     dY: torch.Tensor, W: torch.Tensor, sparse_rows_to_keep: int, layer_idx: str = None
 ):
-    
-    dY = dY.contiguous(); W = W.contiguous() 
+
+    dY = dY.contiguous(); W = W.contiguous()
     check_tensors_gpu_ready(dY, W)
     dY_shape = dY.shape; dtype = dY.dtype; device = dY.device
 
@@ -90,7 +90,7 @@ def sparse_row_matmul_sparse_method_triton(
     K_W, N = W.shape; assert K == K_W
     M = M_total
 
-    N_dense = min(sparse_rows_to_keep, M) 
+    N_dense = min(sparse_rows_to_keep, M)
     if N_dense <= 0: return torch.zeros((M, N), device=device, dtype=dtype).reshape(dY_shape[:-1] + (N,))
 
     dX = torch.zeros((M, N), device=device, dtype=dtype)
@@ -101,7 +101,7 @@ def sparse_row_matmul_sparse_method_triton(
         fixed_slice_matmul_kernel[grid](
             dY_2d, W, dX, M, N, K,
             dY_2d.stride(0), dY_2d.stride(1), W.stride(0), W.stride(1), dX.stride(0), dX.stride(1),
-            sparse_rows_to_keep=N_dense 
+            sparse_rows_to_keep=N_dense
         )
     except Exception as e:
         print(f"ERROR DURING Sparse Method Triton Kernel LAUNCH: {e}"); traceback.print_exc()
@@ -120,37 +120,36 @@ class SparseMethodLinearFunction(torch.autograd.Function):
     def forward(ctx, input, weight, bias, layer_idx, layer_type):
         output = input @ weight.T
         if bias is not None: output += bias
-        ctx.save_for_backward(weight, bias) 
+        ctx.save_for_backward(input, weight, bias)
         ctx.layer_idx = layer_idx; ctx.layer_type_str = 'intermediate' if layer_type == 0 else 'output'
-        ctx.input_shape = input.shape 
         return output
 
     @staticmethod
     def backward(ctx, grad_output):
-        weight, bias = ctx.saved_tensors
+        input, weight, bias = ctx.saved_tensors
         layer_idx = ctx.layer_idx; layer_type_str = ctx.layer_type_str
         grad_input = grad_weight = grad_bias = None; layer_key = f"{layer_idx}-{layer_type_str}"
 
         needs_input_grad = ctx.needs_input_grad[0]
-        needs_weight_grad = ctx.needs_input_grad[1] # Corresponds to weight in forward inputs
-        needs_bias_grad = ctx.needs_input_grad[2]   # Corresponds to bias in forward inputs
+        needs_weight_grad = ctx.needs_input_grad[1]
+        needs_bias_grad = ctx.needs_input_grad[2]
 
         if bias is not None and needs_bias_grad:
             if grad_output is not None:
-                 grad_bias = grad_output.sum(dim=tuple(range(grad_output.ndim - 1)))
+                grad_bias = grad_output.sum(dim=tuple(range(grad_output.ndim - 1)))
 
-        if needs_weight_grad:
-             grad_weight = None
+        if needs_weight_grad and grad_output is not None:
+            grad_weight = grad_output.reshape(-1, grad_output.shape[-1]).T @ input.reshape(-1, input.shape[-1])
 
         if needs_input_grad:
             if grad_output is not None:
                 grad_input = sparse_row_matmul_sparse_method_triton(
-                    grad_output, weight, 
+                    grad_output, weight,
                     sparse_rows_to_keep=SparseMethodLinearFunction._sparse_rows_to_keep,
                     layer_idx=layer_key
                 )
             else:
-                grad_input = torch.zeros(ctx.input_shape, device=weight.device, dtype=weight.dtype)
+                grad_input = torch.zeros(input.shape, device=weight.device, dtype=weight.dtype)
 
         return grad_input, grad_weight, grad_bias, None, None
 
