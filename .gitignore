@@ -1,0 +1,10 @@
+old/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.pt
+*.bin
+*.safetensors

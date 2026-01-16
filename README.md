@@ -1,75 +1,39 @@
-# ✨ Triton Sparse Backward Benchmark & Analysis ✨
+# SEBP: Acceleration of Backpropagation in Linear Layers of Transformer Models
 
-This project explores and benchmarks a custom sparse backward pass implementation for Transformer Feed-Forward Network (FFN) layers using PyTorch and [Triton](https://github.com/openai/triton). It specifically implements and evaluates an efficient 'fixed slice' method where only the top N rows of the gradient tensor (`dY`) are computationally involved in the `dX = dY @ W` calculation during the backward pass, aiming for reduced latency.
+## Overview
 
-The suite includes tools for:
-* Latency benchmarking of the sparse Triton kernel against the original model.
-* Sparsity analysis and gradient visualization.
-* Comparative analysis of accuracy trajectories and latency between the original model, the sparse Triton method, and optionally the DropBP technique (if you want to run comapre_methods.py you'll have to install it via their github).
+This repository contains the official implementation of **Sparsity-Exploiting Backward Pass (SEBP)**, a method for accelerating the fine-tuning of Transformer models. SEBP leverages the structured row sparsity found in output gradients—primarily caused by padding in short input sequences—to reduce the computational cost (FLOPs) of the backward pass in linear layers.
 
----
+Unlike system-level optimizations that often increase memory consumption, SEBP provides significant speedups with negligible memory overhead by utilizing a custom Triton kernel to perform efficient dense-dense matrix multiplications on non-zero gradient rows.
 
-## 🚀 Features
+## Key Contributions
 
-* **Custom Triton Kernel:** A highly optimized `fixed_slice_matmul_kernel` written in Triton for the sparse backward computation, designed for potential speedups.
-* **Latency Benchmarking:** Tools to compare the forward and backward pass latency of standard Hugging Face models vs. models using the custom sparse Triton kernel (`main.py`).
-* **Sparsity Analysis & Visualization:** Script (`sparsity_plotter.py`) to analyze gradient sparsity patterns and generate insightful visualizations (heatmaps, histograms).
-* **Accuracy & Speed Comparison:** Comprehensive script (`compare_methods.py`) to compare accuracy trajectories (across multiple runs with error bars) andoptionally DropBP methods during fine-tuning on GLUE tasks.
-* **Model Flexibility:** Supports analysis on different Transformer architectures like **BERT** and **RoBERTa**, automatically adapting layer replacement logic.
-* **Configurable:** Easily change parameters within each script (model name, tasks, batch size, sequence length, sparse method parameters, layers to modify, etc.).
-* **Data Handling:** Uses the `datasets` library to download and preprocess GLUE task data automatically.
+* **Backward Pass Acceleration:** Achieves approximately **2.15x speedup** for BERT-base on GLUE tasks and **1.99x speedup** for LLaMA-3.2-3B on reasoning benchmarks.
+* **Memory Efficiency:** Maintains a memory footprint comparable to standard PyTorch fine-tuning. For LLaMA-3B, SEBP requires only ~0.37 GB of additional memory, whereas alternative solutions like DeepSpeed can increase usage by over 5 GB.
+* **Drop-In Integration:** The method is implemented as a custom `torch.autograd.Function` that overrides only the backward pass of linear layers, leaving the forward pass and model weights unchanged.
+* **Architecture Support:** Validated on both encoder-only architectures (BERT, RoBERTa) and decoder-only architectures (Llama, Qwen).
 
----
+## Methodology
 
-## ⚙️ Prerequisites
+In many Natural Language Processing (NLP) tasks, input sequences are significantly shorter than the model's maximum context length (e.g., 512 or 4096 tokens). Standard training pads these sequences to a fixed length, resulting in numerous zero-value tokens.
 
-* **Python:** Version 3.8 or higher.
-* **pip:** Python package installer.
-* **NVIDIA GPU:** CUDA-enabled GPU is required. Triton performance benefits significantly from newer architectures (Ampere/Hopper, Compute Capability 7.0+ recommended).
-* **CUDA Toolkit:** Must be installed and compatible with your PyTorch and Triton versions. Check the PyTorch [website](https://pytorch.org/get-started/locally/) for compatibility.
-* **(Optional) DropBP:** For the `compare_methods.py` script, install `dropbp` if you wish to include it in the comparison.
+We observe that this padding induces structured row sparsity in the output gradients ($\frac{\partial L}{\partial Y}$) of linear layers. SEBP exploits this by:
+1.  **Sparsity Analysis:** Identifying rows in the gradient matrix that correspond to padding or contain negligible signal (noise below a calculated threshold $\epsilon$).
+2.  **Selective Computation:** Using a custom Triton kernel to select only the top-$k$ active rows.
+3.  **Dense Optimization:** Converting large sparse-dense multiplications into compact dense-dense operations, thereby skipping redundant computations for padding tokens.
 
----
+## Installation
 
-## 🛠️ Installation & Setup
+### Prerequisites
+* Python 3.8 or higher
+* PyTorch >= 2.1.0 with CUDA support
+* Triton >= 2.1.0
+* NVIDIA GPU (Ampere architecture or newer recommended for optimal Triton performance)
 
-1.  **Clone the Repository:**
-    ```bash
-    # git clone
-    cd <repository-directory>
-    ```
-
-2.  **Create and Activate a Virtual Environment (Recommended):**
-    ```bash
-    # Linux / macOS
-    python3 -m venv venv
-    source venv/bin/activate
-
-    # Windows (Git Bash / WSL)
-    python -m venv venv
-    source venv/Scripts/activate
-
-    # Windows (Command Prompt / PowerShell)
-    python -m venv venv
-    .\venv\Scripts\activate
-    ```
-
-3.  **Install Dependencies:**
-    Ensure your CUDA environment is correctly set up before installing `triton` and `torch`.
-    ```bash
-    pip install -r requirements.txt
-    # You might also need: pip install matplotlib evaluate scikit-learn scipy # If not already included
-    # Optional: install dropbp via their github
-    ```
----
-
-## ▶️ Usage
-
-This project contains multiple scripts for different analyses:
-
-### 1. Running Latency Benchmark (`main.py`)
-
-This script focuses purely on measuring the forward and backward pass latency speedup achieved by replacing standard linear layers with the sparse Triton kernel implementation.
+### Setup
+Clone the repository and install the package in editable mode:
 
 ```bash
-python main.py
+git clone [https://github.com/Dmitrii-Topchii/SEBP.git)
+cd sebp-acceleration
+pip install -e .
