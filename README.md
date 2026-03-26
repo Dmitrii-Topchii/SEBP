@@ -204,11 +204,7 @@ apply_sebp_to_model(model, sparse_rows=50)
 
 ---
 
-Paper page: https://aclanthology.org/2026.eacl-srw.31/
-
-DOI link: https://doi.org/10.18653/v1/2026.eacl-srw.31
-
-BibTeX key: topchii-etal-2026-acceleration
+Dmitrii Topchii, Alexander Panchenko, and Viktoriia A. Chekalina. 2026. [Acceleration of Backpropagation in Linear Layers of Transformer Models Based on Gradient Structure](https://aclanthology.org/2026.eacl-srw.31/). In Proceedings of the 19th Conference of the European Chapter of the Association for Computational Linguistics (Volume 4: Student Research Workshop), pages 426–436, Rabat, Morocco. Association for Computational Linguistics.
 
 ## Contact
 
