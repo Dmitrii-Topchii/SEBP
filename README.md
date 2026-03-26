@@ -177,7 +177,6 @@ This runs WinoGrande, ARC-Easy, ARC-Challenge, and HellaSwag benchmarks and outp
 > **Note:** Quality validation requires significant GPU memory (~16 GB+) and time. An NVIDIA A100 or equivalent is recommended.
 
 ---
-
 ## Using SEBP in Your Own Code
 
 You can integrate SEBP into any supported Transformer model in two lines:
