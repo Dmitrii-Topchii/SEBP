@@ -204,6 +204,10 @@ apply_sebp_to_model(model, sparse_rows=50)
 
 ---
 
+Paper page: https://aclanthology.org/2026.eacl-srw.31/
+DOI link: https://doi.org/10.18653/v1/2026.eacl-srw.31
+BibTeX key: topchii-etal-2026-acceleration
+
 ## Contact
 
 If any questions arise regarding the method, implementation, or reproduction of results, please reach out to:
