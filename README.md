@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains the official implementation of **Sparsity-Exploiting Backward Pass (SEBP)**, a method for accelerating the fine-tuning of Transformer models. SEBP leverages the structured row sparsity found in output gradients — primarily caused by padding in short input sequences — to reduce the computational cost (FLOPs) of the backward pass in linear layers.
+This repository contains the official implementation of **Sparsity-Exploiting Backward Pass (SEBP)**, a method for accelerating the fine-tuning of Transformer models. SEBP leverages the structured row sparsity found in output gradients- primarily caused by padding in short input sequences - to reduce the computational cost (FLOPs) of the backward pass in linear layers.
 
 Unlike system-level optimizations that often increase memory consumption, SEBP provides significant speedups with negligible memory overhead by utilizing a custom Triton kernel to perform efficient dense-dense matrix multiplications on non-zero gradient rows.
 
