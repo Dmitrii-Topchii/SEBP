@@ -40,7 +40,7 @@ SEBP/
 
 ## Step-by-Step Launch Guide
 
-### Step 1 — Prerequisites
+### Step 1 Prerequisites
 
 Make sure you have:
 
@@ -54,14 +54,14 @@ Make sure you have:
 
 > **Note:** Triton requires a CUDA-capable NVIDIA GPU. The library is not compatible with CPU-only or AMD environments.
 
-### Step 2 — Clone the Repository
+### Step 2 Clone the Repository
 
 ```bash
 git clone https://github.com/Dmitrii-Topchii/SEBP.git
 cd SEBP
 ```
 
-### Step 3 — Create a Virtual Environment (recommended)
+### Step 3 Create a Virtual Environment (recommended)
 
 ```bash
 python -m venv .venv
@@ -78,15 +78,15 @@ Activate it:
   .venv\Scripts\Activate.ps1
   ```
 
-### Step 4 — Install Dependencies
+### Step 4 Install Dependencies
 
-**Option A** — via `requirements.txt` (recommended for running scripts):
+**Option A** via `requirements.txt` (recommended for running scripts):
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**Option B** — via editable install (if you plan to import `sebp` as a package):
+**Option B**  via editable install (if you plan to import `sebp` as a package):
 
 ```bash
 pip install -e .
@@ -94,7 +94,7 @@ pip install -e .
 
 Both options install all required libraries: PyTorch, Triton, Transformers, Datasets, etc.
 
-### Step 5 — Authenticate with Hugging Face (if needed)
+### Step 5 Authenticate with Hugging Face (if needed)
 
 Some models (e.g., Llama) are gated and require a Hugging Face access token.
 
@@ -110,7 +110,7 @@ huggingface-cli login
 
 > **Tip:** BERT and RoBERTa do not require authentication — you can skip this step if using those models.
 
-### Step 6 — Run the Interactive Benchmark
+### Step 6 Run the Interactive Benchmark
 
 ```bash
 python main.py
@@ -151,7 +151,7 @@ Starting Training (10 steps)...
    Memory Delta:  12.34 MB
 ```
 
-### Step 7 — Run Tests (optional)
+### Step 7 Run Tests (optional)
 
 #### 7a. Sparsity Measurement
 
